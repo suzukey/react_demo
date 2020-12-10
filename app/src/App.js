@@ -1,5 +1,6 @@
-import './App.css';
+import './assets/styles/App.css';
 import { BrowserRouter, Route, Switch } from 'react-router-dom';
+import IndexPage from './pages/index'
 
 function App() {
   return (
@@ -7,17 +8,7 @@ function App() {
       <BrowserRouter>
         <Switch>
           <Route path="/">
-            <p>
-              Edit <code>src/App.js</code> and save to reload.
-            </p>
-            <a
-              className="App-link"
-              href="https://reactjs.org"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Learn React
-            </a>
+            <IndexPage />
           </Route>
         </Switch>
       </BrowserRouter>
