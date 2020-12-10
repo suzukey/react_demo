@@ -1,4 +1,3 @@
-import logo from './logo.svg';
 import './App.css';
 import { BrowserRouter, Route, Switch } from 'react-router-dom';
 
@@ -8,7 +7,6 @@ function App() {
       <BrowserRouter>
         <Switch>
           <Route path="/">
-            <img src={logo} className="App-logo" alt="logo" />
             <p>
               Edit <code>src/App.js</code> and save to reload.
             </p>
