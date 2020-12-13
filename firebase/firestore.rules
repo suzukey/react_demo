@@ -1,8 +1,110 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if false;
+
+    // firebaseの認証ユーザーであるか
+    function isAnyAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isUserAuthenticated(userID) {
+      return isAnyAuthenticated() && userID == request.auth.uid;
+    }
+
+    // firestore側に既にあるデータ
+    function existingData() {
+      return resource.data;
+    }
+
+    // リクエストしてきたデータ
+    function incomingData() {
+      return request.resource.data;
+    }
+
+    // // fieldNameのデータをvalueの数増分しているかどうか
+    // function isFieldIncremented(fieldName, value) {
+    //   return (resource == null && incomingData()[fieldName] == value)
+    //     || incomingData()[fieldName] == existingData()[fieldName] + value;
+    // }
+
+    // fieldNameのデータを更新していないかどうか
+    function isNotUpdating(fieldName) {
+      return !(fieldName in incomingData()) || incomingData()[fieldName] == existingData()[fieldName];
+    }
+
+    // allowedFieldsにあるfielfに対してのみ書き込みを行っているか
+    function isWritingToAllowedFields(allowedFields) {
+      return allowedFields.hasAll(incomingData().keys());
+    }
+
+    // function documentPath(paths) {
+    //   return path([['databases', database, 'documents'].join('/'), paths.join('/')].join('/'));
+    // }
+
+    function isValidString(text, min, max) {
+      return text is string && min <= text.size() && text.size() <= max;
+    }
+
+    // function isValidNumber(num, min, max) {
+    //   return num is number && min <= num && num <= max;
+    // }
+
+    // fieldNameのデータがserverTimeStamp()と一致するかどうか
+    function isServerTimeStamp(fieldName) {
+      return incomingData()[fieldName] == request.time;
+    }
+
+
+    match /users/{userID} {
+      function userFields() {
+        return ['name', 'iconURL', 'createdAt', 'updatedAt'];
+      }
+
+      function validateUserField() {
+        return isWritingToAllowedFields(userFields())
+          && (isNotUpdating('name') || isValidString(incomingData().name, 1, 20))
+          && (isNotUpdating('iconURL') || isValidString(incomingData().iconURL, 1, 1000));
+      }
+
+      allow create: if isUserAuthenticated(userID)
+        && validateUserField()
+        && isServerTimeStamp('createdAt')
+        && isServerTimeStamp('updatedAt')
+      ;
+
+      allow update: if isUserAuthenticated(userID)
+        && validateUserField()
+        && isNotUpdating('createdAt')
+        && isServerTimeStamp('updatedAt')
+      ;
+
+      allow get: if isUserAuthenticated(userID);
+
+      match /todos/{todoID} {
+        function todoFields() {
+          return ['title', 'isCompleted', 'completedAt', 'createdAt', 'updatedAt'];
+        }
+
+        allow create: if isUserAuthenticated(userID)
+          && isWritingToAllowedFields(todoFields())
+          && isValidString(incomingData().title, 1, 100)
+          && incomingData().isCompleted == false
+          && (!('completedAt' in incomingData()) || incomingData().completedAt == null)
+          && isServerTimeStamp('createdAt')
+          && isServerTimeStamp('updatedAt')
+        ;
+
+        allow update: if isUserAuthenticated(userID)
+          && isWritingToAllowedFields(todoFields())
+          && isValidString(incomingData().title, 1, 100)
+          && (
+            (existingData().isCompleted == false && incomingData().isCompleted == true && isServerTimeStamp('completedAt'))
+            || (incomingData().isCompleted == false && incomingData().completedAt == null)
+          )
+          && isNotUpdating('createdAt')
+          && isServerTimeStamp('updatedAt')
+        ;
+      }
     }
   }
 }
