@@ -1,0 +1,16 @@
+users:
+  documentID: UserID
+
+  name: String?
+  iconURL: String?
+  createdAt: Date
+  updatedAt: Date
+
+  todos:
+    documentID: auto
+
+    title: String?
+    isCompleted: Bool
+    completedAt: Date?
+    createdAt: Date
+    updatedAt: Date
